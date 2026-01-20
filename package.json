@@ -5,8 +5,8 @@
     "start": "node helloworld"
   },
   "dependencies": {
-    "send": "^0.16.2",
-    "async": "2.6.1" 
+    "async": "^2.6.4",
+    "send": "^0.16.2"
   },
   "devDependencies": {
     "debug": "^4.1.1"
