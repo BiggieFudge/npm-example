@@ -6,7 +6,7 @@
   },
   "dependencies": {
     "send": "^0.16.2",
-    "async": "1.5.2"
+    "async": "2.6.1" 
   },
   "devDependencies": {
     "debug": "^4.1.1"
