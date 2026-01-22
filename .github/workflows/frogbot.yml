@@ -39,3 +39,5 @@ jobs:
           JF_GIT_BASE_BRANCH: ${{ matrix.branch }}    # For repository scan action
           CI: true
           JFROG_CLI_LOG_LEVEL: DEBUG
+          JF_FAIL: true
+          
