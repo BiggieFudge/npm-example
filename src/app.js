@@ -1,58 +1,64 @@
-// CVE-2023-45133: Arbitrary Code Execution in Babel path.evaluate()
-// Exploit: Attacker-controlled input -> path.evaluate() -> RCE
-// Ref: https://steakenthusiast.github.io/2023/10/11/CVE-2023-45133-Finding-an-Arbitrary-Code-Execution-Vulnerability-In-Babel/
+// SAFE: No path.evaluate() or path.evaluateTruthy() - CVE-2023-45133 not applicable
+// We only read path.node, never trigger static evaluation of expressions
 const parser = require('@babel/parser');
 const traverse = require('@babel/traverse').default;
 const axios = require('axios');
 const wordWrap = require('word-wrap');
 const WebSocket = require('ws');
 
-// Exact PoC payload from blog: Number.constructor + String({toString}) triggers RCE
-const EXPLOIT_PAYLOAD = `String({ toString: Number.constructor("console.log(process.mainModule.require('child_process').execSync('id').toString())")});`;
+const MAX_INPUT_LENGTH = 10000; // Mitigate word-wrap ReDoS (CVE-2023-26115)
+const ALLOWED_FETCH_ORIGINS = ['https://trusted-cdn.example.com']; // Restrict axios SSRF
 
-// REMOTE INPUT: Attacker supplies code via argv, HTTP, or WebSocket - propagates to path.evaluate()
 async function getCode(input) {
-    if (!input) return `const answer = 40 + 2;`;
+    if (!input) return `function square(n) { return n * n; }`;
     if (input.startsWith('http://') || input.startsWith('https://')) {
-        const res = await axios.get(input);
+        const url = new URL(input);
+        if (!ALLOWED_FETCH_ORIGINS.some(origin => url.origin === origin)) {
+            throw new Error('URL not in allowlist');
+        }
+        const res = await axios.get(input, { maxRedirects: 0 });
         return res.data;
     }
     return input;
 }
 
-// VULNERABLE: Matches blog PoC - path.evaluate() called on attacker-controlled AST
-// No sanitization - crafted expressions (Number.constructor, String+toString) execute during evaluation
+// SAFE: Uses path.node only - never path.evaluate() or path.evaluateTruthy()
 function analyzeCode(source) {
+    if (source.length > MAX_INPUT_LENGTH) throw new Error('Input too long');
     const ast = parser.parse(source);
-    const evalVisitor = {
-        Expression(path) {
-            path.evaluate(); // CVE-2023-45133 trigger - executes crafted code
+    const visitor = {
+        FunctionDeclaration(path) {
+            // Read path.node only - do NOT call path.evaluate() or path.evaluateTruthy()
+            if (path.node.id) console.log('Function:', path.node.id.name);
         },
     };
-    traverse(ast, evalVisitor);
+    traverse(ast, visitor);
 }
 
 async function main() {
     const useWs = process.argv.includes('--ws');
-    const useExploit = process.argv.includes('--exploit');
     const input = process.argv.find((a, i) => i > 0 && !a.startsWith('--'));
 
     if (useWs) {
-        const wss = new WebSocket.Server({ port: 8080 });
-        console.log('WebSocket server on ws://localhost:8080 - attacker sends JS code');
+        const wss = new WebSocket.Server({ port: 8080, maxPayload: 8192 });
+        console.log('WebSocket server on ws://localhost:8080');
         wss.on('connection', (ws) => {
             ws.on('message', (data) => {
                 const code = data.toString();
-                console.log('Attacker code:\n', wordWrap(code, { width: 80 }));
-                analyzeCode(code); // Attacker input -> path.evaluate()
+                if (code.length > MAX_INPUT_LENGTH) {
+                    ws.send('Input too long');
+                    return;
+                }
+                console.log('Code:\n', wordWrap(code, { width: 80 }));
+                analyzeCode(code);
                 ws.send('Done.');
             });
         });
         return;
     }
 
-    // --exploit: Run exact PoC from blog (proves vulnerability is applicable)
-    const code = useExploit ? EXPLOIT_PAYLOAD : await getCode(input);
+    const code = await getCode(input);
+    if (code.length > MAX_INPUT_LENGTH) throw new Error('Input too long');
     console.log('Code to analyze:\n', wordWrap(code, { width: 80 }));
     analyzeCode(code);
     console.log('Analysis done.');
