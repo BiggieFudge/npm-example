@@ -1,13 +1,14 @@
 // SAFE: No path.evaluate() or path.evaluateTruthy() - CVE-2023-45133 not applicable
-// We only read path.node, never trigger static evaluation of expressions
+// CVE-2025-27152: No axios with user-controlled URLs - use Node fetch instead
+// CVE-2024-37890: ws server with maxHeadersCount mitigation
 const parser = require('@babel/parser');
 const traverse = require('@babel/traverse').default;
-const axios = require('axios');
 const wordWrap = require('word-wrap');
 const WebSocket = require('ws');
+const http = require('http');
 
 const MAX_INPUT_LENGTH = 10000; // Mitigate word-wrap ReDoS (CVE-2023-26115)
-const ALLOWED_FETCH_ORIGINS = ['https://trusted-cdn.example.com']; // Restrict axios SSRF
+const ALLOWED_FETCH_ORIGINS = ['https://trusted-cdn.example.com'];
 
 async function getCode(input) {
     if (!input) return `function square(n) { return n * n; }`;
@@ -16,8 +17,10 @@ async function getCode(input) {
         if (!ALLOWED_FETCH_ORIGINS.some(origin => url.origin === origin)) {
             throw new Error('URL not in allowlist');
         }
-        const res = await axios.get(input, { maxRedirects: 0 });
-        return res.data;
+        // CVE-2025-27152: Use Node fetch, not axios - avoids SSRF via absolute URL bypass
+        const res = await fetch(input, { redirect: 'manual' });
+        if (res.status >= 300 && res.status < 400) throw new Error('Redirects not followed');
+        return res.text();
     }
     return input;
 }
@@ -40,7 +43,11 @@ async function main() {
     const input = process.argv.find((a, i) => i > 0 && !a.startsWith('--'));
 
     if (useWs) {
-        const wss = new WebSocket.Server({ port: 8080, maxPayload: 8192 });
+        // CVE-2024-37890: Limit header size to prevent DoS (crash when headers exceed maxHeadersCount)
+        const server = http.createServer({ maxHeaderSize: 8192 });
+        server.maxHeadersCount = 0;  // Disable limit to avoid crash on threshold exceed
+        const wss = new WebSocket.Server({ server, maxPayload: 8192 });
+        server.listen(8080);
         console.log('WebSocket server on ws://localhost:8080');
         wss.on('connection', (ws) => {
             ws.on('message', (data) => {
