@@ -6,7 +6,8 @@
   },
   "dependencies": {
     "send": "^0.16.2",
-    "async": "2.6.1" 
+    "async": "2.6.1",
+    "empty-purl-pkg": "file:./local-dep"
   },
   "devDependencies": {
     "debug": "^4.1.1"
