@@ -5,9 +5,9 @@
     "start": "node helloworld"
   },
   "dependencies": {
-    "send": "^0.16.2",
-    "async": "2.6.1",
-    "empty-purl-pkg": "file:./local-dep"
+    "async": "^2.6.4",
+    "empty-purl-pkg": "file:./local-dep",
+    "send": "^0.16.2"
   },
   "devDependencies": {
     "debug": "^4.1.1"
