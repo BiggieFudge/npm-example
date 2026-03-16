@@ -42,7 +42,7 @@ jobs:
     runs-on: self-hosted
     strategy:
       matrix:
-        branch: ["main"]
+        branch: ["frogbot-test"]
     steps:
       - uses: jfrog/frogbot@v2
         with:
