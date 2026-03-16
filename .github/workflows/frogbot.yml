@@ -57,4 +57,4 @@ jobs:
           JFROG_CLI_LOG_LEVEL: DEBUG
           JF_FAIL: true
           JF_USE_CONFIG_PROFILE: true
-          JFROG_CLI_ANALYZER_MANAGER_VERSION: "1.30.0"
+          JFROG_CLI_ANALYZER_MANAGER_VERSION: "1.29.0"
