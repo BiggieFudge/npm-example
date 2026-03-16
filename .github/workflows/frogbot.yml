@@ -56,3 +56,4 @@ jobs:
           CI: true
           JFROG_CLI_LOG_LEVEL: DEBUG
           JF_FAIL: true
+          JF_USE_CONFIG_PROFILE: true
