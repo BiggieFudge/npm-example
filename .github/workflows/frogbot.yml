@@ -48,13 +48,14 @@ jobs:
     steps:
       - uses: jfrog/frogbot@v2
         with:
-          version: "2.27.0"
+          version: "2.30.0"
         env:
           JF_URL: ${{ secrets.JF_URL }}
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
           JF_GIT_TOKEN: ${{ secrets.TOKEN_GITHUB }}
           # This variable IS required for Repository/Scheduled scans
           JF_GIT_BASE_BRANCH: ${{ matrix.branch }}
+          JFROG_CLI_ANALYZER_MANAGER_VERSION: "1.27.0"
           CI: true
           JFROG_CLI_LOG_LEVEL: DEBUG
           JF_FAIL: true
