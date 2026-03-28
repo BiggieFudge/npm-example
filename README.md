@@ -72,6 +72,8 @@ Pack and publish the npm package to Artifactory, while recording it as an artifa
 jf npm publish --build-name my-npm-build --build-number 1
 ```
 
+fa.das
+
 Publish the build info to Artifactory:
 
 ```
